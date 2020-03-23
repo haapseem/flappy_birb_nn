@@ -1,125 +1,72 @@
-let canvas, birds, boxes, pipes, pipe1, pipe2, bird_group, pipe_group;
+let canvas, birds, boxes, pipes, bird_group, pipe_group, mr;
 
-const BIRDAMOUNT = 100;
+const BIRDAMOUNT = 200;
+const BIRBSTART = 300;
+const SPEED = -3;
+let movements = 0;
+let generation = 0;
 
-class Pipe {
-    constructor(x) {
-            this.x = x;
-            this.y = Math.random() * 400;
-            this.pipes = new Group();
-    }
 
-    generate_groups() {
-        this.pipes = new Group();
-        this.y = Math.random() * 300;
-        this.pipes.add(createSprite(this.x, this.y + 550, 50, 600));
-        this.pipes.add(createSprite(this.x, this.y - 250, 50, 600));
-        this.pipes.forEach(pipe => pipe.velocity.x = -2);
-        return this.pipes;
-    }
-
-    overlap(x) {
-        return x.overlap(this.pipes);
-    }
-
-    move() {
-        if(this.pipes[0].position.x <= -25){
-            this.y = Math.random() * 300;
-            this.pipes.map(pipe => {
-                pipe.position.x += 450;
-                return pipe;
+class GameGenerator {
+    static createPipes() {
+        pipe_group = new Group();
+        pipes = [
+            new Pipe(350),
+            new Pipe(575)
+        ];
+        pipes.forEach(pipe => {
+            pipe.generate_groups();
+            pipe.pipes.forEach(x => {
+                pipe_group.add(x);
             });
-            this.pipes[0].position.y = this.y + 550;
-            this.pipes[1].position.y = this.y - 250;
-        }
-    }
-}
-
-class Birb {
-    constructor() {
-        this.bird = createSprite(20,200,20,20);
-        this.bird.velocity.y = 0;
-        this.brain = new NN([
-            new Layer(4, 8),
-            new Layer(8, 16),
-            new Layer(16, 16),
-            // new Layer(16, 32),
-            // new Layer(32, 16),
-            new Layer(16, 8),
-            new Layer(8, 4),
-            new Layer(4, 2)
-        ]); // bird y.position, y.velocity, 2x (pipe.y, pipe.x)
-        this.isdead = false;
-    }
-
-    move(input_array) {
-        let prediction = this.brain.predict([
-            this.bird.position.y / 600 - 0.5,
-            this.bird.velocity.y / 10,
-            input_array[0] / 400 - 0.5,
-            input_array[1] / 600 - 0.5,
-        ]);
-        if(prediction[0] > prediction[1]){
-            this.bird.velocity.y -= 5;
-        } else {
-            this.bird.velocity.y += 0.2;
-        }
-        // this.bird.velocity.y += this.bird.velocity > 10 ? 0 : 0.2;
-        // if(this.bird.position.y >= 600){ this.bird.velocity.y = 0;}
-    }
-
-    overlap(x) {
-        return this.bird.overlap(x);
-    }
-
-    toGroup(group) {
-        if (!this.isdead){
-            group.add(this.bird);
-        }
-    }
-}
-
-function toStart(birb) {
-    pipe_group = new Group();
-    pipe1 = new Pipe(475);
-    pipe2 = new Pipe(250);
-    pipes = [pipe1,pipe2];
-    pipe1.generate_groups();
-    pipe2.generate_groups();
-    pipe_group.add(pipe1.pipes[0]);
-    pipe_group.add(pipe1.pipes[1]);
-    pipe_group.add(pipe2.pipes[0]);
-    pipe_group.add(pipe2.pipes[1]);
-
-    if (birb instanceof Birb) {
-        console.log("new brains")
-        birds.forEach(bird => {
-            bird.brain = birb.brain.copy();
-            bird.isdead = false;
-            bird.bird.position.y = 300;
-            bird.bird.velocity.y = 0;
         });
-        birds[0].brain = birb.brain;
-    } else {
-        for ( let i = 0; i < BIRDAMOUNT; i++ ){
-            birds.push(new Birb());
-        }
     }
 
+    static createBirds(master_brain) {
+        if (master_brain instanceof Birb) {
+            generation++;
+            console.table(master_brain.brain)
+            birds[0].brain.layers = master_brain.brain.layers.map(x => {
+                let layer = new Layer(x.input_nodes, x.output_nodes);
+                layer.weights = Matrix.add(x.weights, 0);
+                layer.bias = Matrix.add(x.bias, 0);
+                return layer;
+            });
+            birds.slice(1, birds.length).forEach(bird => bird.brain = birds[0].brain.copy(mr));
+            birds.forEach(bird => {
+                bird.isdead = false;
+                bird.bird.position.y = BIRBSTART;
+                bird.bird.velocity.y = 0;
+            });
+        } else {
+            for ( let i = 0; i < BIRDAMOUNT; i++ ){
+                birds.push(new Birb());
+            }
+            birds[0].bird.shapeColor = color(0,255,255);
+
+        } movements = 0;
+    }
+
+    static toStart(bird) {
+        GameGenerator.createPipes();
+        GameGenerator.createBirds(bird)
+    }
 }
 
 function setup() {
     c = createCanvas(800,600);
     birds = [];
-    toStart(undefined);
+    GameGenerator.toStart(undefined);
     console.log(birds[0].brain.getVisualisationData())
 }
 
 function draw() {
+    mr = 1 / (movements / 100);
+    movements++;
     fill(0);
-    let closer_pipe = pipe1;
-    if(pipe1.pipes[0].position.x > pipe2.pipes[0].position.x) {
-        closer_pipe = pipe2;
+    let closer_pipe = pipes[0];
+    if(pipes[0].pipes[0].position.x > pipes[1].pipes[0].position.x) {
+        closer_pipe = pipes[1];
     }
     birds.filter(x => !x.isdead).forEach(bird => bird.move([
         closer_pipe.pipes[0].position.x,
@@ -133,8 +80,7 @@ function draw() {
                 ){
 
             if (birds.filter(x => x.isdead == false).length == 1) {
-                console.log("to start");
-                toStart(birds.filter(x => !x.isdead)[0]);
+                GameGenerator.toStart(birds.filter(x => !x.isdead)[0]);
             } else {
                 birds[i].isdead = true;
             }
@@ -159,8 +105,19 @@ function draw() {
     let thebrain = birds[0].brain;
     let layer_data = thebrain.getVisualisationData()
 
+
     rect(400, 0, 800, 600);
     fill(255);
+
+    stroke(255);
+    text('GEN: ' + generation, 10, 30);
+    text('Mutation: ' + (mr > 1 ? 1 : mr), 10, 10);
+
+    let minium_node = min(layer_data.map(x => min(x.map(y => min(y)))));
+    let maximum_node = max(layer_data.map(x => max(x.map(y => max(y)))));
+
+    let middlepoint = (minium_node + maximum_node) / 2;
+    let multiplier = 255 / (maximum_node - middlepoint);
 
     for (let i = 0; i < layer_data.length; i++){
         let matrix = layer_data[i];
@@ -172,62 +129,23 @@ function draw() {
                 let node = vector[k];
 
                 // set color based on value
-                if (node < 0.5) {
-                    stroke(node * 255 + 255 / 2, 0, 0);
-                } else {
-                    stroke(0, node * 255, 0);
-                }
+                stroke((node - middlepoint) * multiplier, (node - middlepoint) * -multiplier, 0)
 
-                pa = [
-                    420 + (bw / layer_data.length) * i,
-                    (bh / vector.length) * k + (bh / vector.length) / 2
-                ];
-                pb = [
-                    420 + (bw / layer_data.length) * (i + 1),
-                    (bh / matrix.length) * j + (bh / matrix.length) / 2
-                ];
+                pa = [420 + (bw / layer_data.length) * i,(bh / vector.length) * k + (bh / vector.length) / 2];
+                pb = [420 + (bw / layer_data.length) * (i + 1),(bh / matrix.length) * j + (bh / matrix.length) / 2];
                 line(pa[0], pa[1], pb[0], pb[1]);
                 noStroke();
                 ellipse(pa[0], pa[1], 4, 4);
                 ellipse(pb[0], pb[1], 4, 4);
-                // line(420 + bw * i, bh + bh * k, 420 + bw * (i + 1), bh + bh * j);
-                // noStroke();
-                // ellipse(420 + bw * i, bh + bh * k, 4, 4);
-                // ellipse(420 + bw * (i + 1), bh + bh * j, 4, 4);
             }
         }
     }
-
-
-    // for (let i = 0; i < wih.length; i++) {
-    //     for (let j = 0; j < wih[0].length; j++) {
-    //         if(wih[i][j] < 0.5) {
-    //             stroke(wih[i][j] * 255 + 255 / 2,0,0);
-    //         } else {
-    //             stroke(0,wih[i][j] * 255,0);
-    //         }
-    //         line(420, 2*brain_space+brain_space*j, 500, brain_space+brain_space*i);
-    //         noStroke()
-    //         ellipse(420, 2*brain_space+brain_space*j, 4, 4);
-    //         ellipse(500, brain_space+brain_space*i, 4, 4);
-    //     }
-    // }
-    // for (let i = 0; i < who.length; i++) {
-    //     for (let j = 0; j < who[0].length; j++) {
-    //         if(who[i][j] < 0.5) {
-    //             stroke(who[i][j] * 255 + 255 / 2,0,0);
-    //         } else {
-    //             stroke(0,who[i][j] * 255,0);
-    //         }
-    //         line(500, brain_space+brain_space*j, 580, 3*brain_space+brain_space*i);
-    //         noStroke()
-    //         ellipse(500, brain_space+brain_space*j, 4, 4);
-    //         ellipse(580, 3*brain_space+brain_space*i, 4, 4);
-    //     }
-    // }
 }
 
-
-// function keyPressed() {
-//     if(keyCode===32){ bird.bird.velocity.y -= 7;}
-// }
+function keyPressed() {
+    if (keyCode===32) {
+        movements = 1000000000;
+        let birb = birds.filter(x => !x.isdead)[0];
+        GameGenerator.toStart(birb);
+    }
+}

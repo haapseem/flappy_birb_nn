@@ -11,14 +11,17 @@ class Layer {
         this.weights = Matrix.random(this.output_nodes, this.input_nodes);
         this.bias = Matrix.random(this.output_nodes, 1);
 
-        this.mutate_rate = 0.25;
+        this.mutate_rate = 0.5;
     }
 
-    copy() {
+    copy(mr) {
+        if (mr > 1) {
+            mr = 1;
+        }
         let result = new Layer(this.input_nodes, this.output_nodes);
 
-        result.weights = Matrix.add(this.weights, Matrix.multiply(Matrix.random(this.output_nodes, this.input_nodes), this.mutate_rate))
-        result.bias = Matrix.add(this.bias, Matrix.multiply(Matrix.random(this.output_nodes, 1), this.mutate_rate))
+        result.weights = Matrix.add(this.weights, Matrix.multiply(Matrix.random(this.output_nodes, this.input_nodes), mr ? mr : this.mutate_rate))
+        result.bias = Matrix.add(this.bias, Matrix.multiply(Matrix.random(this.output_nodes, 1), mr ? mr : this.mutate_rate))
 
         return result;
     }
@@ -66,4 +69,5 @@ class NN {
 
         return result;
     }
+
 }
