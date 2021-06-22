@@ -1,6 +1,6 @@
 let canvas, birds, boxes, pipes, bird_group, pipe_group, mr;
 
-const BIRDAMOUNT = 200;
+const BIRDAMOUNT = 50;
 const BIRBSTART = 300;
 const SPEED = -3;
 let movements = 0;
@@ -57,7 +57,7 @@ function setup() {
     c = createCanvas(800,600);
     birds = [];
     GameGenerator.toStart(undefined);
-    console.log(birds[0].brain.getVisualisationData())
+    // console.log(birds[0].brain.getVisualisationData())
 }
 
 function draw() {

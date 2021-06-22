@@ -1,7 +1,7 @@
 
 class Birb {
     constructor() {
-        let img = loadImage('assets/birb.png');
+        // let img = loadImage('assets/birb.png');
         this.bird = createSprite(20,BIRBSTART,20,20);
         this.bird.shapeColor = color(0,255,0);
         this.bird.velocity.y = 0;

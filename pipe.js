@@ -10,14 +10,14 @@ class Pipe {
     }
 
     generate_groups() {
-        let img = loadImage('assets/pipe.png');
+        // let img = loadImage('assets/pipe.png');
         this.pipes = new Group();
         this.y = Math.random() * 300;
         this.pipes.add(createSprite(this.x, this.y + pipedown, 40, 600));
         this.pipes.add(createSprite(this.x, this.y - pipeup, 40, 600));
         this.pipes.forEach(pipe => {
             pipe.velocity.x = SPEED;
-            pipe.addImage(img);
+            // pipe.addImage(img);
         }); // SPEED defined in sketch.js
         return this.pipes;
     }
